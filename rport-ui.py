@@ -5,17 +5,7 @@ import os
 import sys
 from subprocess import call, run
 
-# Opening JSON file
-f = open('config.json')
-  
-# returns JSON object as 
-# a dictionary
-datafile = json.load(f)
 
-#cleanup
-f.close()
-
-ip = requests.get('https://api.ipify.org').content.decode('utf8')
 
 def getstats():
     # * Gets status
@@ -125,6 +115,17 @@ AvailableLinuxServers,LinuxServerNumericID = getlinuxservers()
 openservices = getopentunnels()
 
 def main():
+    # Opening JSON file
+    f = open('config.json')
+    
+    # returns JSON object as 
+    # a dictionary
+    datafile = json.load(f)
+
+    #cleanup
+    f.close()
+
+    ip = requests.get('https://api.ipify.org').content.decode('utf8')
     # * Checks if arguments were passed, assume ssh
     if len(sys.argv) > 1:
         porttoopen = 22
