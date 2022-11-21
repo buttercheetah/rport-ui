@@ -13,4 +13,8 @@ Steps
 3. Run the program
 
 If desired, you can run the command to temporarily forward just port 22 and open a ssh connection
+<<<<<<< HEAD
 >`python rport-ui.py <name as it appears in rport>`
+=======
+`python rport-ui.py <name as it appears in rport>`
+>>>>>>> cadea0e1c88ddefb2aa1362a96a3a2e3cdd66670
