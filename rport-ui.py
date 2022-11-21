@@ -145,54 +145,58 @@ def main():
             if value==sys.argv[1]:
                 # * Sets UI to server numeric id
                 ui = LinuxServerNumericID[count]
-
-    else:
+    else: # * no arguments
         printAvailableLinuxServers(AvailableLinuxServers)
         ui, user, porttoopen, protocol, iplocked, publicport = getuserinput()
-    if AvailableLinuxServers[ui] in openservices:
+    if AvailableLinuxServers[ui] in openservices: # * Checks if requested server has open ports
         print("server has exposed ports")
-        for count, value in enumerate(openservices[AvailableLinuxServers[ui]]):
-            print(value['RecievePort'])
-            if str(value['RecievePort']) == str(porttoopen):
-                if value['ip'] == str(ip) or value['ip'] == "0.0.0.0" or value['ip'] == None:
+        for count, value in enumerate(openservices[AvailableLinuxServers[ui]]): # * Itterates over open ports
+            #print(value['RecievePort'])
+            if str(value['RecievePort']) == str(porttoopen): # * if the wanted port is already open
+                if value['ip'] == str(ip) or value['ip'] == "0.0.0.0" or value['ip'] == None: # * if the tunnel allows current IP address
                     data = {'lport':value['port']}
                     print("Found existing tunnel")
-                else:
+                else: # * Tunnel does not allow current IP address, so close the tunnel and create a new one.
                     closetunnel(AvailableLinuxServers[ui],value['id'])
                     print("deleted old tunnel")
                     data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport, iplocked)
-    else:
+    else: # * No tunnels are opened on requested server, so create a new tunnel.
         data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport,iplocked)
-    wrotefile = False
-    if porttoopen == 22:
+    wrotefile = False # * sets wrotefile to False to prevent errors when removing temporary file
+    if porttoopen == 22: # * if the tunnel is for port 22 (ssh)
         wrotefile = True
+        # * sets the file extension based on host os
         if platform.system() == 'Windows':
             ext = 'cmd'
         elif platform.system() == 'Linux':
             ext ='sh'
-        if writesshfile(str(data['lport']), user, ext):
-            rc = call(os.getcwd()+'/tempfile.'+ext, shell=True)
+        if writesshfile(str(data['lport']), user, ext): # * tries to write to the file, if it errors out, it does not call the file.
+            rc = call(os.getcwd()+'/tempfile.'+ext, shell=True) # * calls tempfile
         else:
             print("error writing temp file")
     else:
+        # * a simple while loop or user input
         run = True
         while run:
+            # * prints out the tunnel information
             print(f"Port {porttoopen}->{data['lport']}")
             print("This connection will be open for 24 hours")
+            # * prints out the baseurl with the port number for easy copying
             print(f'{datafile["baseurl"].replace("https://", "")}:{data["lport"]}')
             print("press q to close connection")
             uit = input()
-            if uit == 'q':
-                run = False
-    if wrotefile:
+            if uit.lower() == 'q': # * if user inputs q
+                run = False # * exit while loop
+    if wrotefile: # * if the file has been written, remove the file.
         print("Removing temporary file")
         os.remove(f'tempfile.{ext}')
     print("closing connection")
+    # * updates openservices with new tunnel information
     openservices = getopentunnels()
-    for count, value in enumerate(openservices[AvailableLinuxServers[ui]]):
-        if value['port'] == data['lport']:
-            closetunnel(AvailableLinuxServers[ui],value['id'])
-            print(f'Connection ID {value["id"]} closed')
-    input("press enter to close program")
+    for count, value in enumerate(openservices[AvailableLinuxServers[ui]]): # * for each tunnel open to requested server
+        if value['port'] == data['lport']: # * if the destination port is the requested port
+            closetunnel(AvailableLinuxServers[ui],value['id']) # * close the tunnel
+            print(f'Connection ID {value["id"]} closed') # * print the tunnel id
+    input("press enter to close program") # * just waits for user input before closing the program.
 if __name__ == '__main__':
     main()
