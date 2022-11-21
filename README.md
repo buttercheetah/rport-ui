@@ -6,6 +6,8 @@ This is probably the messiest way of temporarily forwarding ports using rport.
 
 Please dont blame me if this messes something up for you.
 
+## Please note, even though this repository is named 'rport-ui', this script is only has a cli
+
 # If you wish to actually try this.
 Steps
 1. move config_example.json to config.json
