@@ -111,8 +111,6 @@ def writesshfile(port,user,ext):
         return True
     except:
         return False
-AvailableLinuxServers,LinuxServerNumericID = getlinuxservers()
-openservices = getopentunnels()
 
 def main():
     # Opening JSON file
@@ -126,6 +124,8 @@ def main():
     f.close()
 
     ip = requests.get('https://api.ipify.org').content.decode('utf8')
+    AvailableLinuxServers,LinuxServerNumericID = getlinuxservers()
+    openservices = getopentunnels()
     # * Checks if arguments were passed, assume ssh
     if len(sys.argv) > 1:
         porttoopen = 22
