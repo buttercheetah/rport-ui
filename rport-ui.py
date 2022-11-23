@@ -48,6 +48,7 @@ def getuserinput():
         if user == "":
             user = "bhghdhfh"
         publicport = -1
+        iplocked = True
     else:
         print('Which protocol do you want?\n1) TCP\n2) UDP\n')
         tmpui = input(":")
@@ -113,6 +114,10 @@ def writesshfile(port,user,ext):
         return False
 
 def main():
+    global datafile
+    global LinuxServerNumericID
+    global AvailableLinuxServers
+    global ip
     # Opening JSON file
     f = open('config.json')
     
@@ -172,7 +177,7 @@ def main():
         elif platform.system() == 'Linux':
             ext ='sh'
         if writesshfile(str(data['lport']), user, ext): # * tries to write to the file, if it errors out, it does not call the file.
-            rc = call(os.getcwd()+'/tempfile.'+ext, shell=True) # * calls tempfile
+            rc = call(f'"{os.getcwd()}/tempfile.{ext}"', shell=True) # * calls tempfile
         else:
             print("error writing temp file")
     else:
