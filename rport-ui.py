@@ -4,16 +4,27 @@ import json
 import os
 import sys
 from subprocess import call, run
+import argparse
+parser = argparse.ArgumentParser(description='Control Tunnels using rport')
+parser.add_argument('Server_Host', nargs='?', help='The FQDN of the rport server')
+parser.add_argument('Server_Username', nargs='?', help='The username of the rport server')
+parser.add_argument('Server_Password', nargs='?', help='The password of the rport server')
+parser.add_argument('--server', dest='servername', type=str, help='Name of the server')
+parser.add_argument('--port', dest='serverport', type=int, help='Port Number of the recieving server')
+parser.add_argument('--pport', dest='pport', type=int, help='port number of the public tunnel, set to -1 for random port')
+parser.add_argument('--protocol', dest='protocol', type=str, help='the tunnel protocol [tcp/udp]')
+parser.add_argument('--iplock', dest='iplock', type=bool, help='if the tunnel will be locked to your current ip [True/False]')
+parser.add_argument("--cfile", dest='cfile', type=argparse.FileType('r'), help="A config file to house all options")
+parser.add_argument('--sshuser', dest='sshuser', type=str, help='if port is 22 then provide the username for ssh connection')
 
-
-
-def getstats():
+args = parser.parse_args()
+def getstats(baseurl,username,password):
     # * Gets status
-    x = requests.get(f'{datafile["baseurl"]}/api/v1/status',auth=(datafile['username'], 'datafile["password"]'))
-    return x
-def getlinuxservers():
+    x = requests.get(f'{baseurl}/api/v1/status',auth=(username, password))
+    return x.status_code
+def getlinuxservers(baseurl,username,password):
     # * Gets all linux servers
-    x = requests.get(f'{datafile["baseurl"]}/api/v1/clients?filter[os_kernel]=linux',auth=(datafile['username'], datafile['password']))
+    x = requests.get(f'{baseurl}/api/v1/clients?filter[os_kernel]=linux',auth=(username, password))
     jsondata = x.json()
     data = jsondata['data']
     # * Creates new data structure with response
@@ -23,9 +34,9 @@ def getlinuxservers():
         AvailableLinuxServers[x['name']] = x['id']
         LinuxServerNumericID[count] = x['name']
     return AvailableLinuxServers, LinuxServerNumericID
-def getopentunnels():
+def getopentunnels(baseurl,username,password):
     # * checks all open ports
-    x = requests.get(f'{datafile["baseurl"]}/api/v1/tunnels',auth=(datafile['username'], datafile['password']))
+    x = requests.get(f'{baseurl}/api/v1/tunnels',auth=(username, password))
     jsondata = x.json()
     openservices = {}
     for data in jsondata['data']:
@@ -38,44 +49,128 @@ def printAvailableLinuxServers(AvailableLinuxServers):
     # * prints available servers
     for count, value in enumerate(AvailableLinuxServers):
         print(count, value)
-def getuserinput():
-    # * requests input from user
-    ui = LinuxServerNumericID[int(input())]
-    porttoopen = int(input("Enter port to open: "))
+def getinput():
+    ServerName, ui, user, porttoopen, protocol, iplocked, ServerHost, ServerUsername, ServerPassword, publicport = None, None, None, None, None, None, None, None, None, None
+    # * Check if Config File was passed
+    if args.cfile:
+        try:
+            # Opening JSON file
+            #f = open(args.cfile)
+            # returns JSON object as 
+            # a dictionary
+            datafile = json.load(args.cfile)
+            #cleanup
+            if 'Server_Host' in datafile:
+                ServerHost = datafile['Server_Host']
+            if 'Server_Username' in datafile:
+                ServerUsername = datafile['Server_Username']
+            if 'Server_Password' in datafile:
+                ServerPassword = datafile['Server_Password']
+            if 'servername' in datafile:
+                ServerName = datafile['servername']
+            if 'sshuser' in datafile:
+                user = datafile['sshuser']
+            if 'port' in datafile:
+                porttoopen = datafile['port']
+            if 'protocol' in datafile:
+                protocol = datafile['protocol']
+            if 'IPLock' in datafile:
+                iplocked = datafile['IPLock']
+            if 'pport' in datafile:
+                publicport = datafile['pport']
+        except Exception as e:
+            print(e)
+            sys.exit(1)
+    # * Check args
+    if args.servername:
+        ServerName = args.servername
+    if args.serverport:
+        porttoopen = args.serverport
     if porttoopen == 22:
-        protocol = 'tcp'
-        user = input("Enter username: ")
-        if user == "":
-            user = "bhghdhfh"
-        publicport = -1
-        iplocked = True
-    else:
+        if args.sshuser:
+            user = args.sshuser
+    if args.pport:
+        publicport = args.pport
+    if args.protocol:
+        protocol = args.protocol
+    if args.iplock:
+        iplocked = args.iplock
+
+    # * requests input from user
+    if ServerHost == None:
+        ServerHost = input("Enter Rport Server Host: ")
+    if ServerUsername == None:
+        ServerUsername = input("Enter Rport Server Username: ")
+    if ServerPassword == None:
+        ServerPassword = input("Enter Rport Server Password: ")
+    ServerResponse = getstats(ServerHost,ServerUsername,ServerPassword)
+    if ServerResponse != 200:
+        print(f"Server responded with code {ServerResponse}")
+        input("press enter to close")
+        sys.exit(1)
+    AvailableLinuxServers,LinuxServerNumericID = getlinuxservers(ServerHost,ServerUsername,ServerPassword)
+    openservices = getopentunnels(ServerHost,ServerUsername,ServerPassword)
+    if ui == None:
+        printAvailableLinuxServers(AvailableLinuxServers)
+        ui = LinuxServerNumericID[int(input())]
+    if porttoopen == None:
+        porttoopen = getport()
+    if porttoopen == 22:
+        if user == None:
+            user = input("Enter username: ")
+            if user == "":
+                user = "bhghdhfh"
+    if publicport == None:
+        publicport = GetPublicPort()
+    if protocol == None:
+        protocol = getprotocol()
+    if iplocked == None:
+        iplocked = getiplock()
+    for count, value in enumerate(AvailableLinuxServers):
+        if value==ServerName:
+            # * Sets UI to server numeric id
+            ui = LinuxServerNumericID[count]
+    if not checkifservernameisavailable(ui,AvailableLinuxServers):
+        print("server not found")
+        input("press enter to close")
+        sys.exit()
+    return ui, user, porttoopen, protocol, iplocked, publicport, ServerHost, ServerUsername, ServerPassword
+def getport():
+    porttoopen = int(input("Enter port to open: "))
+    return porttoopen
+def getprotocol():
+    protocol = ""
+    while protocol not in ['udp', 'tcp']:
         print('Which protocol do you want?\n1) TCP\n2) UDP\n')
         tmpui = input(":")
         if tmpui == '2':
             protocol = 'udp'
-        else:
+        elif tmpui == '1':
             protocol = 'tcp'
+    return protocol
+def getiplock():
+    iplocked = None
+    while iplocked == None:
         print('IP locked? [Y/n]')
         tmpui = input(":")
         if tmpui.upper() == 'N':
             iplocked = False
         else:
             iplocked = True
-        user = ""
-        print("What port would you like to open?")
-        print("leave blank for auto-configuration")
-        tmpui = input(":")
-        if tmpui == '' or not tmpui.isnumeric():
-            publicport = -1
-        else:
-            publicport = int(tmpui)
-    return ui, user, porttoopen, protocol, iplocked, publicport
+    return iplocked
+def GetPublicPort():
+    print("What port would you like to open?")
+    print("leave blank for auto-configuration")
+    tmpui = input(":")
+    if tmpui == '' or not tmpui.isnumeric():
+        publicport = -1
+    else:
+        publicport = int(tmpui)
 def checkifservernameisavailable(sn,sl):
     return sn in sl
-def closetunnel(client,tunnel):
-    x = requests.delete(f'{datafile["baseurl"]}/api/v1/clients/{client}/tunnels/{tunnel}?force=true',auth=(datafile['username'], datafile['password']))
-def opentunnel(client,port,protocol,publicport,iplocked=True):
+def closetunnel(client,tunnel,baseurl,username,password):
+    x = requests.delete(f'{baseurl}/api/v1/clients/{client}/tunnels/{tunnel}?force=true',auth=(username, password))
+def opentunnel(client,port,protocol,publicport,baseurl,username,password,iplocked=True):
     tmpstr = "&check_port=0"
     if iplocked:
         tmpstr += '&acl='+str(ip)
@@ -85,7 +180,7 @@ def opentunnel(client,port,protocol,publicport,iplocked=True):
         tmpstr += '&local='+str(publicport)
     tmpstr += "&protocol="+str(protocol)
     port = str(port)
-    x = requests.put(f'{datafile["baseurl"]}/api/v1/clients/{client}/tunnels?remote={port}{tmpstr}',auth=(datafile['username'], datafile['password']))
+    x = requests.put(f'{baseurl}/api/v1/clients/{client}/tunnels?remote={port}{tmpstr}',auth=(username, password))
     print("Created new tunnel")
     jsondata = x.json()
     try:
@@ -114,60 +209,26 @@ def writesshfile(port,user,ext):
         return False
 
 def main():
-    global datafile
-    global LinuxServerNumericID
-    global AvailableLinuxServers
-    global ip
-    # Opening JSON file
-    f = open('config.json')
-    
-    # returns JSON object as 
-    # a dictionary
-    datafile = json.load(f)
-
-    #cleanup
-    f.close()
+    global datafile, openservices, LinuxServerNumericID, AvailableLinuxServers, ip
 
     ip = requests.get('https://api.ipify.org').content.decode('utf8')
-    AvailableLinuxServers,LinuxServerNumericID = getlinuxservers()
-    openservices = getopentunnels()
-    # * Checks if arguments were passed, assume ssh
-    if len(sys.argv) > 1:
-        porttoopen = 22
-        protocol = 'tcp'
-        publicport = -1
-        iplocked = True
-        if not checkifservernameisavailable(sys.argv[1],AvailableLinuxServers):
-            print("server not found")
-            input("press enter to close")
-            sys.exit()
-        if len(sys.argv) > 2:
-            # * if two arguments are passed, the second is server username
-            user = sys.argv[2]
-        else:
-            # * otherwise, the user is defaulted to bhghdhfh
-            user = "bhghdhfh"
-        for count, value in enumerate(AvailableLinuxServers):
-            if value==sys.argv[1]:
-                # * Sets UI to server numeric id
-                ui = LinuxServerNumericID[count]
-    else: # * no arguments
-        printAvailableLinuxServers(AvailableLinuxServers)
-        ui, user, porttoopen, protocol, iplocked, publicport = getuserinput()
+    ui, user, porttoopen, protocol, iplocked, publicport,baseurl,username,password = getinput()
+    AvailableLinuxServers,LinuxServerNumericID = getlinuxservers(baseurl,username,password)
+    openservices = getopentunnels(baseurl,username,password)
     if AvailableLinuxServers[ui] in openservices: # * Checks if requested server has open ports
         print("server has exposed ports")
-        for count, value in enumerate(openservices[AvailableLinuxServers[ui]]): # * Itterates over open ports
+        for count, value in enumerate(openservices[AvailableLinuxServers[ui]],baseurl,username,password): # * Itterates over open ports
             #print(value['RecievePort'])
             if str(value['RecievePort']) == str(porttoopen): # * if the wanted port is already open
                 if value['ip'] == str(ip) or value['ip'] == "0.0.0.0" or value['ip'] == None: # * if the tunnel allows current IP address
                     data = {'lport':value['port']}
                     print("Found existing tunnel")
                 else: # * Tunnel does not allow current IP address, so close the tunnel and create a new one.
-                    closetunnel(AvailableLinuxServers[ui],value['id'])
+                    closetunnel(AvailableLinuxServers[ui],value['id'],baseurl,username,password)
                     print("deleted old tunnel")
                     data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport, iplocked)
     else: # * No tunnels are opened on requested server, so create a new tunnel.
-        data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport,iplocked)
+        data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport,baseurl,username,password,iplocked)
     wrotefile = False # * sets wrotefile to False to prevent errors when removing temporary file
     if porttoopen == 22: # * if the tunnel is for port 22 (ssh)
         wrotefile = True
@@ -188,7 +249,7 @@ def main():
             print(f"Port {porttoopen}->{data['lport']}")
             print("This connection will be open for 24 hours")
             # * prints out the baseurl with the port number for easy copying
-            print(f'{datafile["baseurl"].replace("https://", "")}:{data["lport"]}')
+            print(f'{baseurl.replace("https://", "")}:{data["lport"]}')
             print("press q to close connection")
             uit = input()
             if uit.lower() == 'q': # * if user inputs q
@@ -198,10 +259,10 @@ def main():
         os.remove(f'tempfile.{ext}')
     print("closing connection")
     # * updates openservices with new tunnel information
-    openservices = getopentunnels()
+    openservices = getopentunnels(baseurl,username,password)
     for count, value in enumerate(openservices[AvailableLinuxServers[ui]]): # * for each tunnel open to requested server
         if value['port'] == data['lport']: # * if the destination port is the requested port
-            closetunnel(AvailableLinuxServers[ui],value['id']) # * close the tunnel
+            closetunnel(AvailableLinuxServers[ui],value['id'],baseurl,username,password) # * close the tunnel
             print(f'Connection ID {value["id"]} closed') # * print the tunnel id
     input("press enter to close program") # * just waits for user input before closing the program.
 if __name__ == '__main__':

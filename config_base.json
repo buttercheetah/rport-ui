@@ -1,0 +1,11 @@
+{
+    "Server_Host":"<base URL>",
+    "Server_Username":"<your username>",
+    "Server_Password":"<your API password>",
+    "servername":"<server name>",
+    "port":<port number>, 
+    "pport":<public port number>,
+    "protocol":"<protocol tcp/udp>",
+    "IPLock":"<IP lock true/false>",
+    "sshuser":"<ssh username>"
+}

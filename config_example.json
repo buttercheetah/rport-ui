@@ -1,5 +1,11 @@
 {
-    "username":"<your username>",
-    "password":"<your API password>",
-    "baseurl":"<base URL>"
+    "Server_Host":"https://www.domain.com",
+    "Server_Username":"rportuser",
+    "Server_Password":"APIKEY1",
+    "servername":"VM1",
+    "port":22,
+    "pport":2040,
+    "protocol":"tcp",
+    "IPLock":true,
+    "sshuser":"sshUser1"
 }
