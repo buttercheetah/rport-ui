@@ -3,7 +3,7 @@ import platform
 import json
 import os
 import sys
-from subprocess import call, run
+from subprocess import run as subprocess_run
 import argparse
 parser = argparse.ArgumentParser(description='Control Tunnels using rport')
 parser.add_argument('Server_Host', nargs='?', help='The FQDN of the rport server')
@@ -180,7 +180,7 @@ def opentunnel(client,port,protocol,publicport,baseurl,username,password,iplocke
         tmpstr += '&local='+str(publicport)
     tmpstr += "&protocol="+str(protocol)
     port = str(port)
-    x = requests.put(f'{baseurl}/api/v1/clients/{client}/tunnels?remote={port}{tmpstr}',auth=(username, password))
+    x = requests.put(f'{baseurl}/api/v1/clients/{client}/tunnels?remote=127.0.0.1:{port}{tmpstr}',auth=(username, password))
     print("Created new tunnel")
     jsondata = x.json()
     try:
@@ -192,21 +192,6 @@ def opentunnel(client,port,protocol,publicport,baseurl,username,password,iplocke
     except:
         pass
     return jsondata['data']
-def writesshfile(port,user,ext):
-    # * Creates script to ssh to server
-    try:
-        with open('tempfile.'+ext, 'w') as f:
-            if platform.system() == 'Linux':
-                f.write("#!/bin/bash\n")
-                f.write("ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o 'LogLevel ERROR' -p "+port+" "+user+"@rport.iefi.xyz")
-            else:
-                f.write("ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=\\\\.\\NUL -p "+port+" "+user+"@rport.iefi.xyz")
-            print('Wrote File')
-        if platform.system() == 'Linux':
-            run(["chmod","+x",str(os.getcwd()+'/tempfile.'+ext)])
-        return True
-    except:
-        return False
 
 def main():
     global datafile, openservices, LinuxServerNumericID, AvailableLinuxServers, ip
@@ -217,7 +202,7 @@ def main():
     openservices = getopentunnels(baseurl,username,password)
     if AvailableLinuxServers[ui] in openservices: # * Checks if requested server has open ports
         print("server has exposed ports")
-        for count, value in enumerate(openservices[AvailableLinuxServers[ui]],baseurl,username,password): # * Itterates over open ports
+        for count, value in enumerate(openservices[AvailableLinuxServers[ui]]): # * Itterates over open ports
             #print(value['RecievePort'])
             if str(value['RecievePort']) == str(porttoopen): # * if the wanted port is already open
                 if value['ip'] == str(ip) or value['ip'] == "0.0.0.0" or value['ip'] == None: # * if the tunnel allows current IP address
@@ -231,16 +216,11 @@ def main():
         data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport,baseurl,username,password,iplocked)
     wrotefile = False # * sets wrotefile to False to prevent errors when removing temporary file
     if porttoopen == 22: # * if the tunnel is for port 22 (ssh)
-        wrotefile = True
-        # * sets the file extension based on host os
-        if platform.system() == 'Windows':
-            ext = 'cmd'
-        elif platform.system() == 'Linux':
-            ext ='sh'
-        if writesshfile(str(data['lport']), user, ext): # * tries to write to the file, if it errors out, it does not call the file.
-            rc = call(f'"{os.getcwd()}/tempfile.{ext}"', shell=True) # * calls tempfile
+        if platform.system() == 'Linux':
+            CommandToRun = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
         else:
-            print("error writing temp file")
+            CommandToRun = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=\\\\.\\NUL -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
+        rc = subprocess_run(CommandToRun, shell=True)
     else:
         # * a simple while loop or user input
         run = True
@@ -254,9 +234,6 @@ def main():
             uit = input()
             if uit.lower() == 'q': # * if user inputs q
                 run = False # * exit while loop
-    if wrotefile: # * if the file has been written, remove the file.
-        print("Removing temporary file")
-        os.remove(f'tempfile.{ext}')
     print("closing connection")
     # * updates openservices with new tunnel information
     openservices = getopentunnels(baseurl,username,password)

@@ -1,7 +1,2 @@
 requests
-platform
-json
-os
-sys
-subprocess
 argparse
