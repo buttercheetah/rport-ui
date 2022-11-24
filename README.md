@@ -25,7 +25,8 @@ Note: any unwanted options in the configuration file can be removed, the program
 | --pport          | The port that you wish to forward on the rport server |
 | --protocol       | The protocol of the connection either tcp or udp      |
 | --iplock         | if the tunnel is locked to your current ip address (recommended for security)    |
-| --sshuser        | if the tunnel port is 22 it is assumed to be a ssh connection and writes a temporary ssh file. for this, it requires a ssh user to create the file|
+| --sshuser        | if connection is for ssh. Please provide the username for ssh connection|
+| --crun           | Optional command to run while tunnel is open, please note that when this command is finished the tunnel will be closed. enter just [ssh] to open a ssh connection|
 | Server_Host      | The FQDN of the rport server. Include http/https      |
 | Server_Username  | The username of the rport server                      |
 | Server_Password  | The API key of the rport server                       |

@@ -7,5 +7,6 @@
     "pport":<public port number>,
     "protocol":"<protocol tcp/udp>",
     "IPLock":"<IP lock true/false>",
-    "sshuser":"<ssh username>"
+    "sshuser":"<ssh username>",
+    "crun":"<command to run while tunnel open>"
 }

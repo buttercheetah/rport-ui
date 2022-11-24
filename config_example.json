@@ -7,5 +7,6 @@
     "pport":2040,
     "protocol":"tcp",
     "IPLock":true,
-    "sshuser":"sshUser1"
+    "sshuser":"sshUser1",
+    "crun":"ssh"
 }

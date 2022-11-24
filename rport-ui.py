@@ -15,7 +15,8 @@ parser.add_argument('--pport', dest='pport', type=int, help='port number of the 
 parser.add_argument('--protocol', dest='protocol', type=str, help='the tunnel protocol [tcp/udp]')
 parser.add_argument('--iplock', dest='iplock', type=bool, help='if the tunnel will be locked to your current ip [True/False]')
 parser.add_argument("--cfile", dest='cfile', type=argparse.FileType('r'), help="A config file to house all options")
-parser.add_argument('--sshuser', dest='sshuser', type=str, help='if port is 22 then provide the username for ssh connection')
+parser.add_argument('--sshuser', dest='sshuser', type=str, help='if connection is for ssh. Please provide the username for ssh connection')
+parser.add_argument('--crun', dest='crun', type=str, help='Optional command to run while tunnel is open, please note that when this command is finished the tunnel will be closed. enter just [ssh] to open a ssh connection')
 
 args = parser.parse_args()
 def getstats(baseurl,username,password):
@@ -50,7 +51,7 @@ def printAvailableLinuxServers(AvailableLinuxServers):
     for count, value in enumerate(AvailableLinuxServers):
         print(count, value)
 def getinput():
-    ServerName, ui, user, porttoopen, protocol, iplocked, ServerHost, ServerUsername, ServerPassword, publicport = None, None, None, None, None, None, None, None, None, None
+    ServerName, ui, user, porttoopen, protocol, iplocked, ServerHost, ServerUsername, ServerPassword, publicport, crun = None, None, None, None, None, None, None, None, None, None, None
     # * Check if Config File was passed
     if args.cfile:
         try:
@@ -78,6 +79,8 @@ def getinput():
                 iplocked = datafile['IPLock']
             if 'pport' in datafile:
                 publicport = datafile['pport']
+            if 'crun' in datafile:
+                crun = datafile['crun']
         except Exception as e:
             print(e)
             sys.exit(1)
@@ -95,6 +98,8 @@ def getinput():
         protocol = args.protocol
     if args.iplock:
         iplocked = args.iplock
+    if args.crun:
+        crun = args.crun
 
     # * requests input from user
     if ServerHost == None:
@@ -116,10 +121,14 @@ def getinput():
     if porttoopen == None:
         porttoopen = getport()
     if porttoopen == 22:
-        if user == None:
+        if crun == None:
+            print("is this for ssh? [Y/n]")
+            if input("").lower() != "n":
+                protocol = 'tcp'
+                iplocked = True
+                crun = 'ssh'
+        if crun == 'ssh' and user == None:
             user = input("Enter username: ")
-            if user == "":
-                user = "bhghdhfh"
     if publicport == None:
         publicport = GetPublicPort()
     if protocol == None:
@@ -134,7 +143,7 @@ def getinput():
         print("server not found")
         input("press enter to close")
         sys.exit()
-    return ui, user, porttoopen, protocol, iplocked, publicport, ServerHost, ServerUsername, ServerPassword
+    return ui, user, porttoopen, protocol, iplocked, publicport, ServerHost, ServerUsername, ServerPassword, crun
 def getport():
     porttoopen = int(input("Enter port to open: "))
     return porttoopen
@@ -197,7 +206,7 @@ def main():
     global datafile, openservices, LinuxServerNumericID, AvailableLinuxServers, ip
 
     ip = requests.get('https://api.ipify.org').content.decode('utf8')
-    ui, user, porttoopen, protocol, iplocked, publicport,baseurl,username,password = getinput()
+    ui, user, porttoopen, protocol, iplocked, publicport,baseurl,username,password,crun = getinput()
     AvailableLinuxServers,LinuxServerNumericID = getlinuxservers(baseurl,username,password)
     openservices = getopentunnels(baseurl,username,password)
     if AvailableLinuxServers[ui] in openservices: # * Checks if requested server has open ports
@@ -215,12 +224,18 @@ def main():
     else: # * No tunnels are opened on requested server, so create a new tunnel.
         data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport,baseurl,username,password,iplocked)
     wrotefile = False # * sets wrotefile to False to prevent errors when removing temporary file
-    if porttoopen == 22: # * if the tunnel is for port 22 (ssh)
+    if crun =='ssh': # * if the tunnel is for port 22 (ssh)
         if platform.system() == 'Linux':
             CommandToRun = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
         else:
             CommandToRun = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=\\\\.\\NUL -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
         rc = subprocess_run(CommandToRun, shell=True)
+    elif crun != None:
+        try:
+            rc = subprocess_run(crun, shell=True)
+        except Exception as e:
+            print("Error running command\n")
+            print(e)
     else:
         # * a simple while loop or user input
         run = True
