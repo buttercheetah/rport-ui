@@ -274,9 +274,9 @@ def main():
     wrotefile = False # * sets wrotefile to False to prevent errors when removing temporary file
     if crun =='ssh': # * if the tunnel is for port 22 (ssh)
         if platform.system() == 'Linux':
-            CommandToRun = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
+            CommandToRun = f"ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
         else:
-            CommandToRun = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=\\\\.\\NUL -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
+            CommandToRun = f"ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=\\\\.\\NUL -p {data['lport']} {user}@{baseurl.replace('https://', '')}"
         rc = subprocess_run(CommandToRun, shell=True)
     elif crun != None:
         try:
