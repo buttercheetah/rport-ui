@@ -159,7 +159,10 @@ def getinput():
     AvailableLinuxServers,LinuxServerNumericID = getlinuxservers(ServerHost,ServerUsername,ServerPassword)
     openservices = getopentunnels(ServerHost,ServerUsername,ServerPassword)
     if ServerName:
-        ui = list(LinuxServerNumericID.keys())[list(LinuxServerNumericID.values()).index(ServerName)]
+        for count, value in enumerate(AvailableLinuxServers):
+            if value==ServerName:
+                # * Sets UI to server numeric id
+                ui = LinuxServerNumericID[count]
         log.info(f'Got Server ID from name: {ui}')
     if ui == None:
         printAvailableLinuxServers(AvailableLinuxServers)
