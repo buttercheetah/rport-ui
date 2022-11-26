@@ -2,6 +2,7 @@ import requests
 import platform
 import json
 import os
+import logging
 import sys
 from subprocess import run as subprocess_run
 import argparse
@@ -19,12 +20,30 @@ parser.add_argument('--sshuser', dest='sshuser', type=str, help='if connection i
 parser.add_argument('--crun', dest='crun', type=str, help='Optional command to run while tunnel is open, please note that when this command is finished the tunnel will be closed. enter just [ssh] to open a ssh connection')
 
 args = parser.parse_args()
+
+
+# create a logger Log with name 'Main'
+log = logging.getLogger('Main')
+# create file handler which logs even ERROR messages or higher
+log.setLevel(logging.INFO)
+fh = logging.FileHandler('log.log')
+fh.setLevel(logging.INFO)
+# create formatter and add it to the file handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+# add the file handler to the (root) logger
+log.addHandler(fh)
+
+
+
 def getstats(baseurl,username,password):
     # * Gets status
+    log.info('Getting server status')
     x = requests.get(f'{baseurl}/api/v1/status',auth=(username, password))
     return x.status_code
 def getlinuxservers(baseurl,username,password):
     # * Gets all linux servers
+    log.info('Getting Available Linux servers')
     x = requests.get(f'{baseurl}/api/v1/clients?filter[os_kernel]=linux',auth=(username, password))
     jsondata = x.json()
     data = jsondata['data']
@@ -37,6 +56,7 @@ def getlinuxservers(baseurl,username,password):
     return AvailableLinuxServers, LinuxServerNumericID
 def getopentunnels(baseurl,username,password):
     # * checks all open ports
+    log.info('Getting Open tunnels')
     x = requests.get(f'{baseurl}/api/v1/tunnels',auth=(username, password))
     jsondata = x.json()
     openservices = {}
@@ -48,6 +68,7 @@ def getopentunnels(baseurl,username,password):
     return openservices
 def printAvailableLinuxServers(AvailableLinuxServers):
     # * prints available servers
+    log.info('Printing available Linux servers')
     for count, value in enumerate(AvailableLinuxServers):
         print(count, value)
 def getinput():
@@ -63,65 +84,90 @@ def getinput():
             #cleanup
             if 'Server_Host' in datafile:
                 ServerHost = datafile['Server_Host']
+                log.info(f'Set Server_Host from config file to {datafile["Server_Host"]}')
             if 'Server_Username' in datafile:
                 ServerUsername = datafile['Server_Username']
+                log.info(f'Set Server_Username from config file to {datafile["Server_Username"]}')
             if 'Server_Password' in datafile:
                 ServerPassword = datafile['Server_Password']
+                log.info(f'Set Server_Password from config file to {datafile["Server_Password"]}')
             if 'servername' in datafile:
                 ServerName = datafile['servername']
+                log.info(f'Set Server_Name from config file to {datafile["servername"]}')
             if 'sshuser' in datafile:
                 user = datafile['sshuser']
+                log.info(f'Set SSH User from config file to {datafile["sshuser"]}')
             if 'port' in datafile:
                 porttoopen = datafile['port']
+                log.info(f'Set Port from config file to {datafile["port"]}')
             if 'protocol' in datafile:
                 protocol = datafile['protocol']
+                log.info(f'Set Protocol from config file to {datafile["protocol"]}')
             if 'IPLock' in datafile:
                 iplocked = datafile['IPLock']
+                log.info(f'Set IPLock from config file to {datafile["IPLock"]}')
             if 'pport' in datafile:
                 publicport = datafile['pport']
+                log.info(f'Set Public Port from config file to {datafile["pport"]}')
             if 'crun' in datafile:
                 crun = datafile['crun']
+                log.info(f'Set Crun from config file to {datafile["crun"]}')
         except Exception as e:
             print(e)
             sys.exit(1)
     # * Check args
     if args.servername:
         ServerName = args.servername
+        log.info(f'Set Crun from argument to {datafile["crun"]}')
     if args.serverport:
         porttoopen = args.serverport
+        log.info(f'Set Server Port from argument to {datafile["serverport"]}')
     if porttoopen == 22:
         if args.sshuser:
             user = args.sshuser
+            log.info(f'Set SSH User from argument to {user}')
     if args.pport:
         publicport = args.pport
+        log.info(f'Set Public Port from argument to {publicport}')
     if args.protocol:
         protocol = args.protocol
+        log.info(f'Set SSH Protocol from argument to {protocol}')
     if args.iplock:
         iplocked = args.iplock
+        log.info(f'Set IPLock from argument to {iplocked}')
     if args.crun:
         crun = args.crun
+        log.info(f'Set Crun from argument to {crun}')
 
     # * requests input from user
     if ServerHost == None:
         ServerHost = input("Enter Rport Server Host: ")
+        log.info(f'Set Server Host from user input to {ServerHost}')
     if ServerUsername == None:
         ServerUsername = input("Enter Rport Server Username: ")
+        log.info(f'Set Server Username from user input to {ServerUsername}')
     if ServerPassword == None:
         ServerPassword = input("Enter Rport Server Password: ")
+        log.info(f'Set Server Password from user input to {ServerPassword}')
     ServerResponse = getstats(ServerHost,ServerUsername,ServerPassword)
     if ServerResponse != 200:
+        log.error(f'Server Response Code: {ServerResponse}')
         print(f"Server responded with code {ServerResponse}")
         input("press enter to close")
         sys.exit(1)
+    log.info(f'Server response code: {ServerResponse}')
     AvailableLinuxServers,LinuxServerNumericID = getlinuxservers(ServerHost,ServerUsername,ServerPassword)
     openservices = getopentunnels(ServerHost,ServerUsername,ServerPassword)
     if ServerName:
         ui = list(LinuxServerNumericID.keys())[list(LinuxServerNumericID.values()).index(ServerName)]
+        log.info(f'Got Server ID from name: {ui}')
     if ui == None:
         printAvailableLinuxServers(AvailableLinuxServers)
         ui = LinuxServerNumericID[int(input())]
+        log.info(f'Set Server ID from user input to {ui}')
     if porttoopen == None:
         porttoopen = getport()
+        log.info(f'Set Port from user input to {porttoopen}')
     if porttoopen == 22:
         if crun == None:
             print("is this for ssh? [Y/n]")
@@ -133,15 +179,15 @@ def getinput():
             user = input("Enter username: ")
     if publicport == None:
         publicport = GetPublicPort()
+        log.info(f'Set Public Port from user input to {publicport}')
     if protocol == None:
         protocol = getprotocol()
+        log.info(f'Set SSH Protocol from user input to {protocol}')
     if iplocked == None:
         iplocked = getiplock()
-    for count, value in enumerate(AvailableLinuxServers):
-        if value==ServerName:
-            # * Sets UI to server numeric id
-            ui = LinuxServerNumericID[count]
+        log.info(f'Set IPLock from user input to {iplocked}')
     if not checkifservernameisavailable(ui,AvailableLinuxServers):
+        log.error('Server name is not found')
         print("server not found")
         input("press enter to close")
         sys.exit()
