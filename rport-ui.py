@@ -115,6 +115,8 @@ def getinput():
         sys.exit(1)
     AvailableLinuxServers,LinuxServerNumericID = getlinuxservers(ServerHost,ServerUsername,ServerPassword)
     openservices = getopentunnels(ServerHost,ServerUsername,ServerPassword)
+    if ServerName:
+        ui = list(LinuxServerNumericID.keys())[list(LinuxServerNumericID.values()).index(ServerName)]
     if ui == None:
         printAvailableLinuxServers(AvailableLinuxServers)
         ui = LinuxServerNumericID[int(input())]
