@@ -1,0 +1,14 @@
+2022-11-27 22:38:40,335 - Main - INFO - Set Server Host from argument to None
+2022-11-27 22:38:40,335 - Main - INFO - Set Server Username from argument to admin
+2022-11-27 22:38:40,335 - Main - INFO - Set Server Password from argument to ff820fd3-c995-4a98-880b-fc70625327a6
+2022-11-27 22:39:11,246 - Main - INFO - Set Server Host from argument to None
+2022-11-27 22:39:11,246 - Main - INFO - Set Server Username from argument to admin
+2022-11-27 22:39:11,246 - Main - INFO - Set Server Password from argument to ff820fd3-c995-4a98-880b-fc70625327a6
+2022-11-27 22:39:29,077 - Main - INFO - Set Server Host from argument to https://rport.iefi.xyz
+2022-11-27 22:39:29,077 - Main - INFO - Set Server Username from argument to admin
+2022-11-27 22:39:29,077 - Main - INFO - Set Server Password from argument to ff820fd3-c995-4a98-880b-fc70625327a6
+2022-11-27 22:39:29,077 - Main - INFO - Getting server status
+2022-11-27 22:39:29,388 - Main - INFO - Server response code: 200
+2022-11-27 22:39:29,388 - Main - INFO - Getting Available Linux servers
+2022-11-27 22:39:29,642 - Main - INFO - Getting Open tunnels
+2022-11-27 22:39:29,892 - Main - INFO - Printing available Linux servers

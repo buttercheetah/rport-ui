@@ -7,6 +7,9 @@ import sys
 from subprocess import run as subprocess_run
 import argparse
 parser = argparse.ArgumentParser(description='Control Tunnels using rport')
+#parser.add_argument('--serverhost', dest='Server_Host', type=str,  help='The FQDN of the rport server')
+#parser.add_argument('--serverusername', dest='Server_Username', type=str,  help='The username of the rport server')
+#parser.add_argument('--serverpassword', dest='Server_Password', type=str,  help='The password of the rport server')
 parser.add_argument('Server_Host', nargs='?', help='The FQDN of the rport server')
 parser.add_argument('Server_Username', nargs='?', help='The username of the rport server')
 parser.add_argument('Server_Password', nargs='?', help='The password of the rport server')
@@ -116,6 +119,16 @@ def getinput():
             print(e)
             sys.exit(1)
     # * Check args
+    if args.Server_Host:
+        ServerHost = args.Server_Host
+        log.info(f'Set Server Host from argument to {args.Server_Host}')
+    if args.Server_Username:
+        ServerUsername = args.Server_Username
+        log.info(f'Set Server Username from argument to {args.Server_Username}')
+    if args.Server_Password:
+        ServerPassword = args.Server_Password
+        log.info(f'Set Server Password from argument to {args.Server_Password}')
+    
     if args.servername:
         ServerName = args.servername
         log.info(f'Set Crun from argument to {datafile["crun"]}')
