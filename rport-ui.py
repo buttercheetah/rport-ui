@@ -22,6 +22,8 @@ parser.add_argument("--cfile", dest='cfile', type=argparse.FileType('r'), help="
 parser.add_argument('--sshuser', dest='sshuser', type=str, help='if connection is for ssh. Please provide the username for ssh connection')
 parser.add_argument('--crun', dest='crun', type=str, help='Optional command to run while tunnel is open, please note that when this command is finished the tunnel will be closed. enter just [ssh] to open a ssh connection')
 
+parser.add_argument('--verbose', '-v', action='count', default=0)
+
 args = parser.parse_args()
 
 
@@ -117,8 +119,14 @@ def getinput():
                 log.info(f'Set Crun from config file to {datafile["crun"]}')
         except Exception as e:
             print(e)
+            log.critical(e)
             sys.exit(1)
     # * Check args
+
+    if args.verbose > 0:
+        verbose = True
+    else:
+        verbose = False
     if args.Server_Host:
         ServerHost = args.Server_Host
         log.info(f'Set Server Host from argument to {args.Server_Host}')
@@ -203,11 +211,11 @@ def getinput():
         iplocked = getiplock()
         log.info(f'Set IPLock from user input to {iplocked}')
     if not checkifservernameisavailable(ui,AvailableLinuxServers):
-        log.error('Server name is not found')
+        log.critical('Server name is not found')
         print("server not found")
         input("press enter to close")
         sys.exit()
-    return ui, user, porttoopen, protocol, iplocked, publicport, ServerHost, ServerUsername, ServerPassword, crun
+    return ui, user, porttoopen, protocol, iplocked, publicport, ServerHost, ServerUsername, ServerPassword, crun, verbose
 def getport():
     porttoopen = int(input("Enter port to open: "))
     return porttoopen
@@ -254,12 +262,14 @@ def opentunnel(client,port,protocol,publicport,baseurl,username,password,iplocke
     tmpstr += "&protocol="+str(protocol)
     port = str(port)
     x = requests.put(f'{baseurl}/api/v1/clients/{client}/tunnels?remote=127.0.0.1:{port}{tmpstr}',auth=(username, password))
-    print("Created new tunnel")
+    if verbose:
+        print("Created new tunnel")
+    log.info("Created new tunnel")
     jsondata = x.json()
     try:
         jsondata['errors']
-        print("server returned error\n\n")
-        print(jsondata)
+        log.critical(jsondata['errors'])
+        print("server returned error")
         input("\n\npress enter to close")
         sys.exit()
     except:
@@ -270,20 +280,24 @@ def main():
     global datafile, openservices, LinuxServerNumericID, AvailableLinuxServers, ip
 
     ip = requests.get('https://api.ipify.org').content.decode('utf8')
-    ui, user, porttoopen, protocol, iplocked, publicport,baseurl,username,password,crun = getinput()
+    ui, user, porttoopen, protocol, iplocked, publicport,baseurl,username,password,crun,verbose = getinput()
     AvailableLinuxServers,LinuxServerNumericID = getlinuxservers(baseurl,username,password)
     openservices = getopentunnels(baseurl,username,password)
     if AvailableLinuxServers[ui] in openservices: # * Checks if requested server has open ports
-        print("server has exposed ports")
+        if verbose:
+            print("server has exposed ports")
+        log.info("Server has exposed ports")
         for count, value in enumerate(openservices[AvailableLinuxServers[ui]]): # * Itterates over open ports
             #print(value['RecievePort'])
             if str(value['RecievePort']) == str(porttoopen): # * if the wanted port is already open
                 if value['ip'] == str(ip) or value['ip'] == "0.0.0.0" or value['ip'] == None: # * if the tunnel allows current IP address
                     data = {'lport':value['port']}
-                    print("Found existing tunnel")
+                    log.info("Found existing tunnel")
+                    if verbose: print("Found existing tunnel")
                 else: # * Tunnel does not allow current IP address, so close the tunnel and create a new one.
                     closetunnel(AvailableLinuxServers[ui],value['id'],baseurl,username,password)
-                    print("deleted old tunnel")
+                    log.info("delete old tunnel")
+                    if verbose: print("deleted old tunnel")
                     data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport, iplocked)
     else: # * No tunnels are opened on requested server, so create a new tunnel.
         data = opentunnel(AvailableLinuxServers[ui],porttoopen,protocol,publicport,baseurl,username,password,iplocked)
@@ -299,6 +313,8 @@ def main():
             rc = subprocess_run(crun, shell=True)
         except Exception as e:
             print("Error running command\n")
+            log.warn("Error running command")
+            log.warn(e)
             print(e)
     else:
         # * a simple while loop or user input
@@ -313,7 +329,8 @@ def main():
             uit = input()
             if uit.lower() == 'q': # * if user inputs q
                 run = False # * exit while loop
-    print("closing connection")
+    log.info("Closing connection")
+    if verbose: print("closing connection")
     # * updates openservices with new tunnel information
     openservices = getopentunnels(baseurl,username,password)
     for count, value in enumerate(openservices[AvailableLinuxServers[ui]]): # * for each tunnel open to requested server

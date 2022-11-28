@@ -30,6 +30,8 @@ Note: any unwanted options in the configuration file can be removed, the program
 | Server_Host      | The FQDN of the rport server. Include http/https      |
 | Server_Username  | The username of the rport server                      |
 | Server_Password  | The API key of the rport server                       |
+|||
+|-v|Toggles verbose output|
 
 
 
